@@ -70,7 +70,6 @@ def test_blink_led_through_button():
     assert not t.is_alive(), "Doesn't exit the blink_led_through_button yet!"
     assert led12.state == 0
 
-
 def test_transmit_msg():
     """ test for transmit_msg() """
     transmit_msg()

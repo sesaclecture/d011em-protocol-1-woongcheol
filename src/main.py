@@ -24,9 +24,15 @@ def blink_led() -> None:
     - gpiozero.LED 사용
     - 종료시 LED는 OFF 상태
     """
-    # TODO: blink_led 구현
-
-    raise NotImplementedError
+    
+    led = LED(18)
+    cnt = 0
+    while cnt<10:
+        led.on()
+        time.sleep(1)
+        led.off()
+        time.sleep(1)
+        cnt += 1
 
 
 def check_to_input_button() -> None:
@@ -38,10 +44,20 @@ def check_to_input_button() -> None:
     - polling 방식으로 구현할 것.
     - 버튼 입력을 10번 받았으면 종료.
     """
-    # TODO: check_to_input_button 구현
-
-    raise NotImplementedError
-
+    btn = Button(18, pull_up=True)
+    prev = btn.is_pressed
+    cnt = 0
+    
+    while cnt < 10:
+        current = btn.is_pressed
+        
+        if current != prev:
+            if current:
+                cnt += 1
+                print("pressed")
+            else:
+                print("released")
+            prev = current
 
 def blink_led_through_button() -> None:
     """
@@ -53,11 +69,37 @@ def blink_led_through_button() -> None:
     - 종료시 LED는 OFF 상태
     """
     # TODO: blink_led_through_button 구현
+
+    btn = Button(13)
     led = LED(12)
-    led.on()
+    press_count = 0
 
-    raise NotImplementedError
+    try:
+        while press_count < 10:
+            # 1. 버튼이 눌렸는지 확인
+            if btn.is_pressed:
+                # 2. 버튼이 눌리는 '순간'을 감지하여 카운트 증가
+                press_count += 1
+                print(f"Button pressed! Count: {press_count}")
 
+                led.on()
+                time.sleep(0.5)
+                led.off()
+                time.sleep(0.5)
+                
+            # 버튼이 눌리지 않았을 때는 잠시 대기하여 CPU 사용량을 줄임
+            else:
+                time.sleep(0.01)
+
+    finally:
+        # 5. 루프가 종료되면(10번 눌리면) 최종적으로 LED를 끔
+
+        if led:
+            led.off()  # LED를 끄고
+            led.close() # LED가 사용하던 GPIO 핀 자원 해제
+        if btn:
+            btn.close() # Button이 사용하던 GPIO 핀 자원 해제
+        print("Program finished. LED is off.")
 
 def transmit_msg() -> None:
     """
@@ -67,23 +109,73 @@ def transmit_msg() -> None:
     """
     # TODO: blink_led_through_button 구현
 
-    raise NotImplementedError
+    ser = Serial("/dev/ttyAMA3", baudrate=115200, timeout=1.0)
 
+    for i in range(10):
+        msg = f"Hello World! {i}\n"
+        ser.write(msg.encode())
+        time.sleep(1)
 
 def receive_msg() -> None:
     """
     [문제 2] UART3에서 줄 단위로 읽어 화면에 출력.
     - 'exit' (대소문자 무시) 라인을 수신하면 함수 종료
     """
-    # TODO: blink_led_through_button 구현
+    # ser = Serial("/dev/ttyAMA3", baudrate=115200, timeout=1.0)
+    # msg = ""
+    # temp_msg = ""
 
-    raise NotImplementedError
+    # while True:
+    #     temp_msg = ser.read().decode('utf-8')
+    #     if temp_msg != "\n":
+    #         msg += temp_msg
+    #     elif msg != "exit":
+    #         print(msg)
+    #         msg = ""
+    #     elif msg == "exit":
+    #         print(msg)
+    #         break
 
+    ser = None
+    try:
+        ser = Serial("/dev/ttyAMA3", baudrate=115200, timeout=1.0)
+        
+        # 1. bytes를 모아둘 bytearray 버퍼 생성
+        line_buffer = bytearray()
+
+        while True:
+            # 2. 한 바이트씩 읽기
+            one_byte = ser.read()
+
+            # 타임아웃으로 읽은 데이터가 없으면 계속 진행
+            if not one_byte:
+                continue
+            
+            # 3. 버퍼에 읽은 바이트 추가
+            line_buffer.extend(one_byte)
+
+            # 4. 읽은 바이트가 줄바꿈 문자(b'\n')이면 한 줄 처리 시작
+            if one_byte == b'\n':
+                # 5. 버퍼에 쌓인 bytes를 한번에 string으로 변환
+                received_msg = line_buffer.decode('utf-8').strip()
+                
+                if received_msg:
+                    print(received_msg)
+                
+                # 6. 소문자로 바꿔서 'exit'인지 확인 (대소문자 무시)
+                if received_msg.lower() == 'exit':
+                    break
+                
+                # 7. 다음 줄을 위해 버퍼 비우기
+                line_buffer.clear()
+    finally:
+        # 8. 사용한 포트는 항상 닫아줌
+        if ser:
+            ser.close()
 
 if __name__ == "__main__":
-    blink_led()
-    check_to_input_button()
-    blink_led_through_button()
-
-    transmit_msg()
+    # blink_led()
+    # check_to_input_button()
+    # blink_led_through_button()
+    # transmit_msg()
     receive_msg()
